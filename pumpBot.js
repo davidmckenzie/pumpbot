@@ -1,41 +1,55 @@
 var bittrex = require('node.bittrex.api');
 let config = require('./config');
 const readline = require('readline');
+var parseArgs = require('minimist');
 let _ = require('lodash');
 var buyOrderPoll;
 var sellPoll;
 var sellOrderPoll;
 let shares;
 let availableBTC;
-/**
-* read-only key
-**/
-bittrex.options({
-  'apikey' : '',
-  'apisecret' : '',
-});
+let apiKey;
+let apiSecret;
 
-/**
-* trade/read key
-**/
-// bittrex.options({
-//   'apikey' : '',
-//   'apisecret' : '',
-// });
+let parsedArgs = parseArgs(process.argv.slice(2));
+if(parsedArgs['k']) {
+  apiKey = parsedArgs['k'];
+}
+if(parsedArgs['s']) {
+  apiSecret = parsedArgs['s'];
+}
 
-if(!process.argv[2]) {
-  console.log(`usage: pumpBot <coin abbreviation> <shares to purchase>`);
-  //console.log(`eg: pumpBot ZEN 1000`);
+if(apiKey && apiSecret) {
+  bittrex.options({
+    'apikey' : apiKey,
+    'apisecret' : apiSecret,
+  });
+} else {
+  /**
+  * read-only key
+  **/
+  bittrex.options({
+    'apikey' : '',
+    'apisecret' : '',
+  });
+
+  /**
+  * trade/read key
+  **/
+  // bittrex.options({
+  //   'apikey' : '',
+  //   'apisecret' : '',
+  // });
+}
+
+if(!parsedArgs['_']) {
+  console.log(`usage: pumpBot <coin abbreviation>`);
   exit();
 }
 let coinPrice;
 let latestAsk;
 let filledPrice;
-const coin = 'BTC-' + process.argv[2];
-if(process.argv.length >=3) {
-   shares = process.argv[3];
-}
-
+const coin = 'BTC-' + parsedArgs['_'].join('');
 
 bittrex.getbalance({ currency : 'BTC' },( data, err ) => {
   if(err) {
@@ -121,7 +135,7 @@ function pollOrder(orderUUID) {
         exit(`something went wrong with getOrderBuy: ${err.message}`);
       } else {
         console.log(data);
-        if(data.result.isOpen) {
+        if(data.result.IsOpen) {
           console.log(`order not yet filled`);
         } else if(data.result.CancelInitiated) {
           exit(`order cancel was initiated by user`);
