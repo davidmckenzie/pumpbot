@@ -12,6 +12,11 @@ NPM (3.10.10 at least)
 https://nodejs.org/en/download/
 The LTS version of node will come with NPM, it should be all you need
 
+Navigate to the directory with the pumpbot script in a commandline-prompt and run
+```
+npm install
+```
+
 ### Get your API Keys
 You should make sure get two api keys for this bot
 
@@ -71,6 +76,11 @@ config.js holds all the configuration (except for the api keys)
 **IF YOU ARE UNSURE OF A SETTING, DO NOT ATTEMPT TO TEST IT WITH A LIVE TRADE**
 
 ## Running the Bot
+
+Navigate to the directory with the bot script in a commandline prompt
+```
+node pumpbot.js <coin> -k <apiKey:optional> -s <apiSecret:optional>
+```
 
 ### Testing the Bot
 To test the bot and perform a fake trade, you should make sure a few configuration settings are set
