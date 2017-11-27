@@ -28,29 +28,14 @@ You have 2 options for using the api keys...
 ```
 node pumpbot.js -k YourAPIKey -s YourAPISecret <coin>
 ```
-2. You can hardcode it into the application in pumpbot.js
+2. You can hardcode it into the application in config.js
 ```javascript
-if(apiKey && apiSecret) {
-  bittrex.options({
-    'apikey' : apiKey,
-    'apisecret' : apiSecret,
-  });
-} else {
-  /**
-  * read-only key
-  **/
-  bittrex.options({
-    'apikey' : '',
-    'apisecret' : '',
-  });
-
-  /**
-  * trade/read key
-  **/
-  // bittrex.options({
-  //   'apikey' : '',
-  //   'apisecret' : '',
-  // });
+  // READ ONLY KEY
+  api_key: '', // api key for bittrex API
+  api_secret: '', // api secret for bittrex API
+  // TRADE KEY
+  // api_key: '',
+  // api_secret: '',
 ```
 
 Either option I highly recommend you make use of the API whitelist feature in bittrex
@@ -83,7 +68,7 @@ cp config.example.js config.js
 
 Navigate to the directory with the bot script in a commandline prompt
 ```
-node pumpbot.js <coin> [-k <apiKey>] [-s <apiSecret>] [-h <desired_return>] [-l <stop_loss>] [-y]
+node pumpbot.js <coin> [-k <apiKey>] [-s <apiSecret>] [-h <desired_return>] [-l <stop_loss>] [-y] [--help]
 ```
 The -h parameter optionally overrides the desired_return configuration item.
 The -l parameter optionally sets a stop loss in percent form
@@ -107,21 +92,12 @@ This will ensure that a live trade will not be made, it will make a fake trade a
 Make sure you have the api key using your View-Only key and not the Trade key
 
 ```javascript
-  /**
-  * read-only key
-  **/
-  bittrex.options({
-    'apikey' : '',
-    'apisecret' : '',
-  });
-
-  /**
-  * trade/read key
-  **/
-  // bittrex.options({
-  //   'apikey' : '',
-  //   'apisecret' : '',
-  // });
+  // READ ONLY KEY
+  api_key: '', // api key for bittrex API
+  api_secret: '', // api secret for bittrex API
+  // TRADE KEY
+  // api_key: '',
+  // api_secret: '',
 ```
 ### Making a Live Trade
 
@@ -136,21 +112,12 @@ This will instruct the bot to make a live trade on bittrex
 Make sure you have the api key using your Trade key
 
 ```javascript
-  /**
-  * read-only key
-  **/
-  // bittrex.options({
-  //   'apikey' : '',
-  //   'apisecret' : '',
-  // });
-
-  /**
-  * trade/read key
-  **/
-  bittrex.options({
-    'apikey' : '',
-    'apisecret' : '',
-  });
+  // READ ONLY KEY
+  //api_key: '', // api key for bittrex API
+  //api_secret: '', // api secret for bittrex API
+  // TRADE KEY
+  api_key: '',
+  api_secret: '',
 ```
 When you run this script and tell the bot to purchase a coin, it will make a live trade on bittrex.
 
