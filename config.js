@@ -1,6 +1,6 @@
 let config = {
   // READ ONLY KEY
-  api_key: '', // api key for bittrex API
+  api_key: 'gdfgd', // api key for bittrex API
   api_secret: '', // api secret for bittrex API
   // TRADE KEY
   // api_key: '',
