@@ -83,10 +83,12 @@ cp config.example.js config.js
 
 Navigate to the directory with the bot script in a commandline prompt
 ```
-node pumpbot.js <coin> -k <apiKey:optional> -s <apiSecret:optional> -h <desired_return:optional> -l <stop_loss:optional>
+node pumpbot.js <coin> [-k <apiKey>] [-s <apiSecret>] [-h <desired_return>] [-l <stop_loss>] [-y]
 ```
 The -h parameter optionally overrides the desired_return configuration item.
 The -l parameter optionally sets a stop loss in percent form
+The -y parameter disables the confirmation prompt, similar to setting disable_prompt to true
+Including --help outputs help
 
 E.g. To exit on 10% and have a stop loss of 5%:
 ```
