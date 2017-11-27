@@ -214,7 +214,8 @@ function sell() {
   console.log(`polling for ${desired_return * 100}% return`);
   bittrex.getorderbook({market: coin,type: 'buy'}, (data,err) => {
     if(err) {
-      exit(`something went wrong with getOrderBook: ${err.message}`);
+      console.log(`something went wrong with getOrderBook: ${err.message}`);
+      return false;
     } else {
       sellPrice = data.result[0].Rate;
       console.log(`Evaluating selling at ${displaySats(sellPrice)}`);
