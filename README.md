@@ -28,29 +28,14 @@ You have 2 options for using the api keys...
 ```
 node pumpbot.js -k YourAPIKey -s YourAPISecret <coin>
 ```
-2. You can hardcode it into the application in pumpbot.js
+2. You can hardcode it into the application in config.js
 ```javascript
-if(apiKey && apiSecret) {
-  bittrex.options({
-    'apikey' : apiKey,
-    'apisecret' : apiSecret,
-  });
-} else {
-  /**
-  * read-only key
-  **/
-  bittrex.options({
-    'apikey' : '',
-    'apisecret' : '',
-  });
-
-  /**
-  * trade/read key
-  **/
-  // bittrex.options({
-  //   'apikey' : '',
-  //   'apisecret' : '',
-  // });
+  // READ ONLY KEY
+  api_key: '', // api key for bittrex API
+  api_secret: '', // api secret for bittrex API
+  // TRADE KEY
+  // api_key: '',
+  // api_secret: '',
 ```
 
 Either option I highly recommend you make use of the API whitelist feature in bittrex
@@ -58,7 +43,11 @@ Either option I highly recommend you make use of the API whitelist feature in bi
 ### Setting Up the Configuration
 
 There are a few configurations that you will need to understand and change to satisfy your needs from the bot.
-config.js holds all the configuration (except for the api keys)
+First copy config.example.js to config.js, then edit accordingly.
+
+```
+cp config.example.js config.js
+```
 
 ```javascript
   investment_percentage: .5, //how much of your current bittrex wallet do you want to invest
@@ -79,8 +68,18 @@ config.js holds all the configuration (except for the api keys)
 
 Navigate to the directory with the bot script in a commandline prompt
 ```
-node pumpbot.js <coin> -k <apiKey:optional> -s <apiSecret:optional>
+node pumpbot.js <coin> [-k <apiKey>] [-s <apiSecret>] [-h <desired_return>] [-l <stop_loss>] [-y] [--help]
 ```
+The -h parameter optionally overrides the desired_return configuration item.
+The -l parameter optionally sets a stop loss in percent form
+The -y parameter disables the confirmation prompt, similar to setting disable_prompt to true
+Including --help outputs help
+
+E.g. To exit on 10% and have a stop loss of 5%:
+```
+node pumpbot.js vtc -h 0.1 -l 0.05
+```
+**Note: Be careful using the stop loss feature as it may be overly sensitive**
 
 ### Testing the Bot
 To test the bot and perform a fake trade, you should make sure a few configuration settings are set
@@ -93,21 +92,12 @@ This will ensure that a live trade will not be made, it will make a fake trade a
 Make sure you have the api key using your View-Only key and not the Trade key
 
 ```javascript
-  /**
-  * read-only key
-  **/
-  bittrex.options({
-    'apikey' : '',
-    'apisecret' : '',
-  });
-
-  /**
-  * trade/read key
-  **/
-  // bittrex.options({
-  //   'apikey' : '',
-  //   'apisecret' : '',
-  // });
+  // READ ONLY KEY
+  api_key: '', // api key for bittrex API
+  api_secret: '', // api secret for bittrex API
+  // TRADE KEY
+  // api_key: '',
+  // api_secret: '',
 ```
 ### Making a Live Trade
 
@@ -122,21 +112,12 @@ This will instruct the bot to make a live trade on bittrex
 Make sure you have the api key using your Trade key
 
 ```javascript
-  /**
-  * read-only key
-  **/
-  // bittrex.options({
-  //   'apikey' : '',
-  //   'apisecret' : '',
-  // });
-
-  /**
-  * trade/read key
-  **/
-  bittrex.options({
-    'apikey' : '',
-    'apisecret' : '',
-  });
+  // READ ONLY KEY
+  //api_key: '', // api key for bittrex API
+  //api_secret: '', // api secret for bittrex API
+  // TRADE KEY
+  api_key: '',
+  api_secret: '',
 ```
 When you run this script and tell the bot to purchase a coin, it will make a live trade on bittrex.
 

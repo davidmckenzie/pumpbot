@@ -8,8 +8,11 @@ var sellPoll;
 var sellOrderPoll;
 let shares;
 let availableBTC;
-let apiKey;
-let apiSecret;
+let disable_prompt = config.disable_prompt;
+let apiKey = config.api_key || '';
+let apiSecret = config.api_secret || '';
+let desired_return = config.desired_return;
+let stop_loss;
 
 let parsedArgs = parseArgs(process.argv.slice(2));
 if(parsedArgs['k']) {
@@ -18,6 +21,15 @@ if(parsedArgs['k']) {
 if(parsedArgs['s']) {
   apiSecret = parsedArgs['s'];
 }
+if(parsedArgs['h']) {
+  desired_return = parsedArgs['h'];
+}
+if(parsedArgs['l']) {
+  stop_loss = parsedArgs['l'];
+}
+if(parsedArgs['y']) {
+  disable_prompt = true;
+}
 
 if(apiKey && apiSecret) {
   bittrex.options({
@@ -25,25 +37,23 @@ if(apiKey && apiSecret) {
     'apisecret' : apiSecret,
   });
 } else {
-  /**
-  * read-only key
-  **/
-  bittrex.options({
-    'apikey' : '',
-    'apisecret' : '',
-  });
-
-  /**
-  * trade/read key
-  **/
-  // bittrex.options({
-  //   'apikey' : '',
-  //   'apisecret' : '',
-  // });
+  exit('Could not read API keys, check config');
 }
 
-if(!parsedArgs['_']) {
-  console.log(`usage: pumpBot <coin abbreviation>`);
+if(parsedArgs['_'].length == 0 || parsedArgs['help']) {
+  console.log(`Usage: node pumpBot.js <coin> [options]`);
+  console.log(`\nOptions: (options override config.js)\n`);
+  console.log(`  -k <api_key>         API Key`);
+  console.log(`  -s <api_secret>      API Secret`);
+  console.log(`  -h <desired_return>  Desired exit percentage in decimal format (e.g. 0.2 for 20%)`);
+  console.log(`  -l <stop_loss>       Desired stop loss percentage in decimal format (e.g. 0.2 for 20%)`);
+  console.log(`  -y                   Skip the buy confirmation prompt and buy immediately`);
+  console.log(`  --help               Display this message`);
+  console.log(`\nExample Usage:\n`);
+  console.log(`Buy VTC and sell when 20% gain reached, or when loss is 5%:\n`);
+  console.log(`  node pumpBot.js vtc -h 0.2 -l 0.05`);
+  console.log(`\nBuy Bitbean with no stop loss and no confirmation prompt, only selling when 150% gains are reached:\n`);
+  console.log(`  node pumpBot.js bitb -h 1.5 -y`);
   exit();
 }
 let coinPrice;
@@ -106,7 +116,7 @@ function checkCandle() {
 * showPrompt - present a yes/no to the user whether they'd like to continue with the purchase
 **/
 function showPrompt() {
-  if(!config.disable_prompt) {
+  if(!disable_prompt) {
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
@@ -201,7 +211,7 @@ function sell() {
   let purchasedVolume = shares;
   let gainSum = 0;
 
-  console.log(`polling for ${config.desired_return * 100}% return`);
+  console.log(`polling for ${desired_return * 100}% return`);
   bittrex.getorderbook({market: coin,type: 'buy'}, (data,err) => {
     if(err) {
       exit(`something went wrong with getOrderBook: ${err.message}`);
@@ -220,8 +230,21 @@ function sell() {
           gainSum+= gain;
           let avgGain = (gainSum/count) * 100;
           console.log(`total gain on trade: ${avgGain.toFixed(2)}%`);
-
-          if(avgGain >= (config.desired_return * 100)) {
+          if (stop_loss) {
+            if(avgGain < (stop_loss * -100)) {
+              console.log(`STOP LOSS TRIGGERED, SELLING FOR ${displaySats(sellPrice)}`);
+              bittrex.selllimit({market: coin, quantity: shares, rate: sellPrice}, (data,err) => {
+                if(err) {
+                  exit(`something went wrong with sellLimit: ${err.message}`);
+                } else {
+                  clearInterval(sellPoll);
+                  pollForSellComplete(data.result.uuid);
+                }
+              });
+              return false;
+            }
+          }
+          if(avgGain >= (desired_return * 100)) {
             console.log(`SELLING FOR ${displaySats(sellPrice)}`);
             bittrex.selllimit({market: coin, quantity: shares, rate: sellPrice}, (data,err) => {
               if(err) {
