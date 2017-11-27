@@ -56,4 +56,7 @@ typings/
 
 # dotenv environment variables file
 .env
+package-lock.json
 
+# configuration
+config.js
