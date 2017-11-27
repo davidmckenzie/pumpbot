@@ -1,8 +1,5 @@
 var bittrex = require('node.bittrex.api');
 let config = require('./config');
-if (!config) {
-  exit('Error reading config file, did you create it yet?');
-}
 const readline = require('readline');
 var parseArgs = require('minimist');
 let _ = require('lodash');
