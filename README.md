@@ -58,7 +58,11 @@ Either option I highly recommend you make use of the API whitelist feature in bi
 ### Setting Up the Configuration
 
 There are a few configurations that you will need to understand and change to satisfy your needs from the bot.
-config.js holds all the configuration (except for the api keys)
+First copy config.example.js to config.js, then edit accordingly.
+
+```
+cp config.example.js config.js
+```
 
 ```javascript
   investment_percentage: .5, //how much of your current bittrex wallet do you want to invest
@@ -79,8 +83,16 @@ config.js holds all the configuration (except for the api keys)
 
 Navigate to the directory with the bot script in a commandline prompt
 ```
-node pumpbot.js <coin> -k <apiKey:optional> -s <apiSecret:optional>
+node pumpbot.js <coin> -k <apiKey:optional> -s <apiSecret:optional> -h <desired_return:optional> -l <stop_loss:optional>
 ```
+The -h parameter optionally overrides the desired_return configuration item.
+The -l parameter optionally sets a stop loss in percent form
+
+E.g. To exit on 10% and have a stop loss of 5%:
+```
+node pumpbot.js vtc -h 0.1 -l 0.05
+```
+**Note: Be careful using the stop loss feature as it may be overly sensitive**
 
 ### Testing the Bot
 To test the bot and perform a fake trade, you should make sure a few configuration settings are set

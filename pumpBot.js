@@ -1,5 +1,8 @@
 var bittrex = require('node.bittrex.api');
 let config = require('./config');
+if (!config) {
+  exit('Error reading config file, did you create it yet?');
+}
 const readline = require('readline');
 var parseArgs = require('minimist');
 let _ = require('lodash');
@@ -8,8 +11,10 @@ var sellPoll;
 var sellOrderPoll;
 let shares;
 let availableBTC;
-let apiKey;
-let apiSecret;
+let apiKey = config.api_key || '';
+let apiSecret = config.api_secret || '';
+let desired_return = config.desired_return;
+let stop_loss;
 
 let parsedArgs = parseArgs(process.argv.slice(2));
 if(parsedArgs['k']) {
@@ -18,6 +23,12 @@ if(parsedArgs['k']) {
 if(parsedArgs['s']) {
   apiSecret = parsedArgs['s'];
 }
+if(parsedArgs['h']) {
+  desired_return = parsedArgs['h'];
+}
+if(parsedArgs['l']) {
+  stop_loss = parsedArgs['l'];
+}
 
 if(apiKey && apiSecret) {
   bittrex.options({
@@ -25,21 +36,7 @@ if(apiKey && apiSecret) {
     'apisecret' : apiSecret,
   });
 } else {
-  /**
-  * read-only key
-  **/
-  bittrex.options({
-    'apikey' : '',
-    'apisecret' : '',
-  });
-
-  /**
-  * trade/read key
-  **/
-  // bittrex.options({
-  //   'apikey' : '',
-  //   'apisecret' : '',
-  // });
+  exit('Could not read API keys, check config');
 }
 
 if(!parsedArgs['_']) {
@@ -201,7 +198,7 @@ function sell() {
   let purchasedVolume = shares;
   let gainSum = 0;
 
-  console.log(`polling for ${config.desired_return * 100}% return`);
+  console.log(`polling for ${desired_return * 100}% return`);
   bittrex.getorderbook({market: coin,type: 'buy'}, (data,err) => {
     if(err) {
       exit(`something went wrong with getOrderBook: ${err.message}`);
@@ -220,8 +217,21 @@ function sell() {
           gainSum+= gain;
           let avgGain = (gainSum/count) * 100;
           console.log(`total gain on trade: ${avgGain.toFixed(2)}%`);
-
-          if(avgGain >= (config.desired_return * 100)) {
+          if (stop_loss) {
+            if(avgGain < (stop_loss * -100)) {
+              console.log(`STOP LOSS TRIGGERED, SELLING FOR ${displaySats(sellPrice)}`);
+              bittrex.selllimit({market: coin, quantity: shares, rate: sellPrice}, (data,err) => {
+                if(err) {
+                  exit(`something went wrong with sellLimit: ${err.message}`);
+                } else {
+                  clearInterval(sellPoll);
+                  pollForSellComplete(data.result.uuid);
+                }
+              });
+              return false;
+            }
+          }
+          if(avgGain >= (desired_return * 100)) {
             console.log(`SELLING FOR ${displaySats(sellPrice)}`);
             bittrex.selllimit({market: coin, quantity: shares, rate: sellPrice}, (data,err) => {
               if(err) {
