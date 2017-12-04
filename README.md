@@ -57,6 +57,7 @@ cp config.example.js config.js
   disable_prompt: false, //bypass the 'are you sure?' before submitting the buy
   auto_sell: true, //automatically sell when the desired_return is triggered
   desired_return: .2, //percentage return expected when initiating a sell
+  include_fees: true, // include bittrex fees when calculating returns
   fake_buy: true, //fake buy call to test the flow of the application
 ```
 **Any percentage configuration is set with decimals (i.e. .1 = 10%, .2 = 20% etc). If you set these using whole numbers, it will consider them over 100%** 

@@ -12,6 +12,7 @@ let disable_prompt = config.disable_prompt;
 let apiKey = config.api_key || '';
 let apiSecret = config.api_secret || '';
 let desired_return = config.desired_return;
+let include_fees = config.include_fees;
 let stop_loss;
 
 let parsedArgs = parseArgs(process.argv.slice(2));
@@ -230,6 +231,8 @@ function sell() {
           let gain = (order.Rate * purchasedVolume) / (filledPrice * purchasedVolume) - 1;
           gainSum+= gain;
           let avgGain = (gainSum/count) * 100;
+          if (include_fees)
+            avgGain = avgGain - 0.5;
           console.log(`total gain on trade: ${avgGain.toFixed(2)}%`);
           if (stop_loss) {
             if(avgGain < (stop_loss * -100)) {
