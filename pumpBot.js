@@ -3,6 +3,7 @@ const readline = require('readline');
 let _ = require('lodash');
 var parseArgs = require('minimist');
 let parsedArgs = parseArgs(process.argv.slice(2));
+let file;
 
 if(parsedArgs['f']) {
   file = "./config."+parsedArgs['f'];
@@ -21,9 +22,9 @@ let disable_prompt = config.disable_prompt;
 let apiKey = config.api_key || '';
 let apiSecret = config.api_secret || '';
 let desired_return = config.desired_return;
-let include_fees = config.include_fees;
+let include_fees = config.include_fees || false;
 let stop_loss;
-
+let flat_limits = config.flat_limits || false;
 
 if(parsedArgs['k']) {
   apiKey = parsedArgs['k'];
@@ -40,6 +41,9 @@ if(parsedArgs['l']) {
 if(parsedArgs['y']) {
   disable_prompt = true;
 }
+if(parsedArgs['b']) {
+  flat_limits = true;
+}
 
 if(apiKey && apiSecret) {
   bittrex.options({
@@ -55,9 +59,10 @@ if(parsedArgs['_'].length == 0 || parsedArgs['help']) {
   console.log(`\nOptions: (options override config.js)\n`);
   console.log(`  -k <api_key>         API Key`);
   console.log(`  -s <api_secret>      API Secret`);
+  console.log(`  -f <filename>        Specify an alternative configuration file (defaults to config.js)`);
   console.log(`  -h <desired_return>  Desired exit percentage in decimal format (e.g. 0.2 for 20%)`);
   console.log(`  -l <stop_loss>       Desired stop loss percentage in decimal format (e.g. 0.2 for 20%)`);
-  console.log(`  -f <filename>        Specify an alternative configuration file (defaults to config.js)`);
+  console.log(`  -b                   Desired_return / Stop_loss are BTC prices, not percentage (e.g. 0.00025125)`);
   console.log(`  -y                   Skip the buy confirmation prompt and buy immediately`);
   console.log(`  --help               Display this message`);
   console.log(`\nExample Usage:\n`);
@@ -88,9 +93,12 @@ function getCoinStats() {
     if(err) {
       exit(`something went wrong with getTicker: ${err.message}`);
     } else {
-      console.log(`current Ask: ${displaySats(data.result.Ask)}`);
-      console.log(`current Bid: ${displaySats(data.result.Bid)}`);
-      console.log(`Last price:  ${displaySats(data.result.Last)}`);
+      console.log(`current Ask: Ƀ${displaySats(data.result.Ask)}`);
+      console.log(`current Bid: Ƀ${displaySats(data.result.Bid)}`);
+      console.log(`Last price:  Ƀ${displaySats(data.result.Last)}`);
+      if (flat_limits && stop_loss > data.result.Bid) {
+        exit('Stop loss of Ƀ'+stop_loss+' is higher than the current bid of Ƀ'+data.result.Bid+' - would sell immediately');
+      }
       coinPrice = data.result.Ask + (data.result.Ask * config.market_buy_inflation);
       latestAsk = data.result.Ask;
       checkCandle();
@@ -133,7 +141,7 @@ function showPrompt() {
       output: process.stdout
     });
 
-    rl.question(`Are you sure you want to purchase ${shares} ${coin} at ${coinPrice.toFixed(8)}?\n`, (answer) => {
+    rl.question(`Are you sure you want to purchase ${shares} ${coin} at Ƀ${coinPrice.toFixed(8)}?\n`, (answer) => {
       if(answer === 'yes' || answer === 'y') {
         purchase();
       } else {
@@ -163,11 +171,11 @@ function pollOrder(orderUUID) {
         } else {
           if(config.auto_sell) {
             filledPrice = data.result.PricePerUnit;
-            console.log(`ORDER FILLED at ${displaySats(data.result.PricePerUnit)}!`);
+            console.log(`ORDER FILLED at Ƀ${displaySats(data.result.PricePerUnit)}!`);
             clearInterval(buyOrderPoll);
             sellPoll = setInterval(sell, 8000);
           } else {
-            exit(`ORDER FILLED at ${displaySats(data.result.PricePerUnit)}!`);
+            exit(`ORDER FILLED at Ƀ${displaySats(data.result.PricePerUnit)}!`);
           }
         }
       }
@@ -181,7 +189,7 @@ function pollOrder(orderUUID) {
 function purchase() {
   if(config.fake_buy) {
     filledPrice = latestAsk;
-    console.log(`ORDER FILLED at ${displaySats(filledPrice)}!`);
+    console.log(`ORDER FILLED at Ƀ${displaySats(filledPrice)}!`);
     sellPoll = setInterval(sell, 8000);
   } else {
     bittrex.buylimit({market: coin, quantity: shares, rate: coinPrice}, (data,err) => {
@@ -206,7 +214,7 @@ function pollForSellComplete(uuid) {
           exit(`sell order cancel was initiated by user`);
         } else {
           clearInterval(sellOrderPoll);
-          exit(`SELL ORDER FILLED at ${displaySats(data.result.Price)}!`);
+          exit(`SELL ORDER FILLED at Ƀ${displaySats(data.result.Price)}!`);
         }
       }
     });
@@ -221,15 +229,21 @@ function sell() {
   let sellPrice = 0;
   let purchasedVolume = shares;
   let gainSum = 0;
+  let stopPrice = 0;
 
-  console.log(`polling for ${desired_return * 100}% return`);
+  if (flat_limits) {
+    console.log(`polling for Ƀ${displaySats(desired_return)} exit price`);
+  }
+  else {
+    console.log(`polling for ${desired_return * 100}% return`);
+  }
   bittrex.getorderbook({market: coin,type: 'buy'}, (data,err) => {
     if(err) {
       console.log(`something went wrong with getOrderBook: ${err.message}`);
       return false;
     } else {
       sellPrice = data.result[0].Rate;
-      console.log(`Evaluating selling at ${displaySats(sellPrice)}`);
+      console.log(`Evaluating selling at Ƀ${displaySats(sellPrice)}`);
       _.forEach(data.result, (order) => {
         //is initial volume higher than purchased volume?
         if(order.Quantity <= purchasedVolume) {
@@ -244,9 +258,25 @@ function sell() {
           if (include_fees)
             avgGain = avgGain - 0.5;
           console.log(`total gain on trade: ${avgGain.toFixed(2)}%`);
-          if (stop_loss) {
-            if(avgGain < (stop_loss * -100)) {
-              console.log(`STOP LOSS TRIGGERED, SELLING FOR ${displaySats(sellPrice)}`);
+          if (flat_limits) {
+            // sell based on btc price
+            if (stop_loss) {
+              if(sellPrice < stop_loss) {
+                stopPrice = sellPrice * 0.9;
+                console.log(`STOP LOSS TRIGGERED, SELLING FOR Ƀ${displaySats(sellPrice)} with order at Ƀ${displaySats(stopPrice)}`);
+                bittrex.selllimit({market: coin, quantity: shares, rate: stopPrice}, (data,err) => {
+                  if(err) {
+                    exit(`something went wrong with sellLimit: ${err.message}`);
+                  } else {
+                    clearInterval(sellPoll);
+                    pollForSellComplete(data.result.uuid);
+                  }
+                });
+                return false;
+              }
+            }
+            if(sellPrice >= desired_return) {
+              console.log(`SELLING FOR Ƀ${displaySats(sellPrice)}`);
               bittrex.selllimit({market: coin, quantity: shares, rate: sellPrice}, (data,err) => {
                 if(err) {
                   exit(`something went wrong with sellLimit: ${err.message}`);
@@ -256,22 +286,42 @@ function sell() {
                 }
               });
               return false;
+            } else {
+              console.log(`GAIN DOES NOT PASS CONFIGURED THRESHOLD, NOT SELLING`);
+              return false;
             }
-          }
-          if(avgGain >= (desired_return * 100)) {
-            console.log(`SELLING FOR ${displaySats(sellPrice)}`);
-            bittrex.selllimit({market: coin, quantity: shares, rate: sellPrice}, (data,err) => {
-              if(err) {
-                exit(`something went wrong with sellLimit: ${err.message}`);
-              } else {
-                clearInterval(sellPoll);
-                pollForSellComplete(data.result.uuid);
-              }
-            });
-            return false;
           } else {
-            console.log(`GAIN DOES NOT PASS CONFIGURED THRESHOLD, NOT SELLING`);
-            return false;
+            // sell based on percentage
+            if (stop_loss) {
+              if(avgGain < (stop_loss * -100)) {
+                stopPrice = sellPrice * 0.9;
+                console.log(`STOP LOSS TRIGGERED, SELLING FOR Ƀ${displaySats(sellPrice)} with order at Ƀ${displaySats(stopPrice)}`);
+                bittrex.selllimit({market: coin, quantity: shares, rate: stopPrice}, (data,err) => {
+                  if(err) {
+                    exit(`something went wrong with sellLimit: ${err.message}`);
+                  } else {
+                    clearInterval(sellPoll);
+                    pollForSellComplete(data.result.uuid);
+                  }
+                });
+                return false;
+              }
+            }
+            if(avgGain >= (desired_return * 100)) {
+              console.log(`SELLING FOR Ƀ${displaySats(sellPrice)}`);
+              bittrex.selllimit({market: coin, quantity: shares, rate: sellPrice}, (data,err) => {
+                if(err) {
+                  exit(`something went wrong with sellLimit: ${err.message}`);
+                } else {
+                  clearInterval(sellPoll);
+                  pollForSellComplete(data.result.uuid);
+                }
+              });
+              return false;
+            } else {
+              console.log(`GAIN DOES NOT PASS CONFIGURED THRESHOLD, NOT SELLING`);
+              return false;
+            }
           }
         }
       });
