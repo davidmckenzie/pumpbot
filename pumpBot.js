@@ -68,6 +68,8 @@ if(parsedArgs['_'].length == 0 || parsedArgs['help']) {
   console.log(`\nExample Usage:\n`);
   console.log(`Buy VTC using a config file named 'config.trading.js' and sell when 20% gain reached, or when loss is 5%:\n`);
   console.log(`  node pumpBot.js vtc -f trading -h 0.2 -l 0.05`);
+  console.log(`\nBuy XVG using a config file named 'config.bitcoin.js' and sell when 0.00000075 price reached, or when price is below 0.00000065:\n`);
+  console.log(`  node pumpBot.js xvg -f trading -b -h 0.00000075 -l 0.00000065`);
   console.log(`\nBuy Bitbean with no stop loss and no confirmation prompt, only selling when 150% gains are reached:\n`);
   console.log(`  node pumpBot.js -h 1.5 -y bitb`);
   exit();
