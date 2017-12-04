@@ -12,7 +12,9 @@ let config = {
   disable_prompt: false, //bypass the 'are you sure?' before submitting the buy
   auto_sell: true, //automatically sell when the desired_return is triggered
   desired_return: .2, //percentage return expected when initiating a sell
-  fake_buy: true, //fake buy call to test the flow of the application
+  flat_limits: false, // desired_return and the stop loss figures use BTC price, not percentage
+  include_fees: true, // include bittrex fees when calculating returns
+  fake_buy: true //fake buy call to test the flow of the application
 };
 
 module.exports = config;
