@@ -1,8 +1,17 @@
 var bittrex = require('node.bittrex.api');
-let config = require('./config');
 const readline = require('readline');
-var parseArgs = require('minimist');
 let _ = require('lodash');
+var parseArgs = require('minimist');
+let parsedArgs = parseArgs(process.argv.slice(2));
+
+if(parsedArgs['f']) {
+  file = "./config."+parsedArgs['f'];
+} else {
+  file = "./config";
+}
+
+let config = require(file);
+
 var buyOrderPoll;
 var sellPoll;
 var sellOrderPoll;
@@ -15,7 +24,7 @@ let desired_return = config.desired_return;
 let include_fees = config.include_fees;
 let stop_loss;
 
-let parsedArgs = parseArgs(process.argv.slice(2));
+
 if(parsedArgs['k']) {
   apiKey = parsedArgs['k'];
 }
@@ -48,6 +57,7 @@ if(parsedArgs['_'].length == 0 || parsedArgs['help']) {
   console.log(`  -s <api_secret>      API Secret`);
   console.log(`  -h <desired_return>  Desired exit percentage in decimal format (e.g. 0.2 for 20%)`);
   console.log(`  -l <stop_loss>       Desired stop loss percentage in decimal format (e.g. 0.2 for 20%)`);
+  console.log(`  -f <filename>        Specify the configuration filename (defaults to config.js)`);
   console.log(`  -y                   Skip the buy confirmation prompt and buy immediately`);
   console.log(`  --help               Display this message`);
   console.log(`\nExample Usage:\n`);
