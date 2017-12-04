@@ -57,14 +57,14 @@ if(parsedArgs['_'].length == 0 || parsedArgs['help']) {
   console.log(`  -s <api_secret>      API Secret`);
   console.log(`  -h <desired_return>  Desired exit percentage in decimal format (e.g. 0.2 for 20%)`);
   console.log(`  -l <stop_loss>       Desired stop loss percentage in decimal format (e.g. 0.2 for 20%)`);
-  console.log(`  -f <filename>        Specify the configuration filename (defaults to config.js)`);
+  console.log(`  -f <filename>        Specify an alternative configuration file (defaults to config.js)`);
   console.log(`  -y                   Skip the buy confirmation prompt and buy immediately`);
   console.log(`  --help               Display this message`);
   console.log(`\nExample Usage:\n`);
-  console.log(`Buy VTC and sell when 20% gain reached, or when loss is 5%:\n`);
-  console.log(`  node pumpBot.js vtc -h 0.2 -l 0.05`);
+  console.log(`Buy VTC using a config file named 'config.trading.js' and sell when 20% gain reached, or when loss is 5%:\n`);
+  console.log(`  node pumpBot.js vtc -f trading -h 0.2 -l 0.05`);
   console.log(`\nBuy Bitbean with no stop loss and no confirmation prompt, only selling when 150% gains are reached:\n`);
-  console.log(`  node pumpBot.js bitb -h 1.5 -y`);
+  console.log(`  node pumpBot.js -h 1.5 -y bitb`);
   exit();
 }
 let coinPrice;
