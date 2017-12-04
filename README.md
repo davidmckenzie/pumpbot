@@ -57,9 +57,13 @@ cp config.example.js config.js
   disable_prompt: false, //bypass the 'are you sure?' before submitting the buy
   auto_sell: true, //automatically sell when the desired_return is triggered
   desired_return: .2, //percentage return expected when initiating a sell
+  flat_limits: false, // desired_return and the stop loss figures use BTC price, not percentage
+  include_fees: true, // include bittrex fees when calculating returns
   fake_buy: true, //fake buy call to test the flow of the application
 ```
-**Any percentage configuration is set with decimals (i.e. .1 = 10%, .2 = 20% etc). If you set these using whole numbers, it will consider them over 100%** 
+**Any percentage configuration is set with decimals (i.e. .1 = 10%, .2 = 20% etc). If you set these using whole numbers, it will consider them over 100%**
+
+**If using flat_limits, be very careful. There is some intelligence put in to prevent you from placing an order that will immediately exit, but the bot is not idiot-proof.**
 
 **IT IS EXTREMELY IMPORTANT THAT YOU UNDERSTAND WHAT THESE CONFIGURATION OPTIONS DO BEFORE USING THE BOT FOR LIVE TRADES**
 **IF YOU ARE UNSURE OF A SETTING, DO NOT ATTEMPT TO TEST IT WITH A LIVE TRADE**
@@ -68,17 +72,45 @@ cp config.example.js config.js
 
 Navigate to the directory with the bot script in a commandline prompt
 ```
-node pumpbot.js <coin> [-k <apiKey>] [-s <apiSecret>] [-h <desired_return>] [-l <stop_loss>] [-y] [--help]
+node pumpbot.js
 ```
-The -h parameter optionally overrides the desired_return configuration item.
-The -l parameter optionally sets a stop loss in percent form
-The -y parameter disables the confirmation prompt, similar to setting disable_prompt to true
-Including --help outputs help
 
-E.g. To exit on 10% and have a stop loss of 5%:
+This outputs the command options:
+
 ```
-node pumpbot.js vtc -h 0.1 -l 0.05
+Usage: node pumpBot.js <coin> [options]
+
+Options: (options override config.js)
+
+  -k <api_key>         API Key
+  -s <api_secret>      API Secret
+  -f <filename>        Specify an alternative configuration file (defaults to config.js)
+  -h <desired_return>  Desired exit percentage in decimal format (e.g. 0.2 for 20%)
+  -l <stop_loss>       Desired stop loss percentage in decimal format (e.g. 0.2 for 20%)
+  -b                   Desired_return / Stop_loss are BTC prices, not percentage (e.g. 0.00025125)
+  -y                   Skip the buy confirmation prompt and buy immediately
+  --help               Display this message
+
+Example Usage:
+
+Buy VTC using a config file named 'config.trading.js' and sell when 20% gain reached, or when loss is 5%:
+
+  node pumpBot.js vtc -f trading -h 0.2 -l 0.05
+
+Buy XVG using a config file named 'config.bitcoin.js' and sell when 0.00000075 price reached, or when price is below 0.00000065:
+
+  node pumpBot.js xvg -f trading -b -h 0.00000075 -l 0.00000065
+
+Buy Bitbean with no stop loss and no confirmation prompt, only selling when 150% gains are reached:
+
+  node pumpBot.js -h 1.5 -y bitb
 ```
+
+Build out a command based on the options. Notably:
+* The -h parameter optionally overrides the desired_return configuration item.
+* The -l parameter optionally sets a stop loss in percent form
+* The -b parameter uses bitcoin price instead of percentage for the previous two options
+
 **Note: Be careful using the stop loss feature as it may be overly sensitive**
 
 ### Testing the Bot

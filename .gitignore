@@ -60,3 +60,5 @@ package-lock.json
 
 # configuration
 config.js
+config.*.js
+!config.example.js
