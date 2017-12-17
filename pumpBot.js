@@ -175,7 +175,7 @@ function pollOrder(orderUUID) {
             filledPrice = data.result.PricePerUnit;
             console.log(`ORDER FILLED at Ƀ${displaySats(data.result.PricePerUnit)}!`);
             clearInterval(buyOrderPoll);
-            sellPoll = setInterval(sell, 8000);
+            sellPoll = setInterval(sell, 4000);
           } else {
             exit(`ORDER FILLED at Ƀ${displaySats(data.result.PricePerUnit)}!`);
           }
@@ -192,7 +192,7 @@ function purchase() {
   if(config.fake_buy) {
     filledPrice = latestAsk;
     console.log(`ORDER FILLED at Ƀ${displaySats(filledPrice)}!`);
-    sellPoll = setInterval(sell, 8000);
+    sellPoll = setInterval(sell, 4000);
   } else {
     bittrex.buylimit({market: coin, quantity: shares, rate: coinPrice}, (data,err) => {
       if(err) {
