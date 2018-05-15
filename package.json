@@ -5,7 +5,8 @@
   "main": "pumpBot.js",
   "dependencies": {
     "lodash": "^4.17.4",
-    "minimist": "^1.2.0"
+    "minimist": "^1.2.0",
+    "node-binance-api": "^0.5.0"
   },
   "devDependencies": {
     "node.bittrex.api": "^1.0.0"
