@@ -1,3 +1,11 @@
+require('console-stamp')(console, {
+  pattern: 'HH:MM:ss.l',
+  colors: {
+      stamp: 'grey',
+      label: 'grey',
+      metadata: 'green'
+  }
+});
 const binance = require('node-binance-api');
 const readline = require('readline');
 let _ = require('lodash');
@@ -94,9 +102,13 @@ binance.exchangeInfo((error, info) => {
   let priceFilter = coinInfo.filters.find(function (obj) { return obj.filterType == 'PRICE_FILTER'; });
   let lotFilter = coinInfo.filters.find(function (obj) { return obj.filterType == 'LOT_SIZE'; });
   var stepSize = lotFilter.stepSize;
-  binance.bookTickers(coin, (error, ticker) => {
-    console.log(`Ask price of ${coin}: `, ticker.askPrice);
-    console.log(`Bid price of ${coin}: `, ticker.bidPrice);
+  // binance.bookTickers(coin, (error, ticker) => {
+  //   console.log(`Ask price of ${coin}: `, ticker.askPrice);
+  //   console.log(`Bid price of ${coin}: `, ticker.bidPrice);
+  // });
+
+  binance.depth(coin, (error, depth, symbol) => {
+    if(error) exit(error);
     binance.balance((error, balances) => {
       if(error) exit(error);
       console.log("ETH balance: ", balances.ETH.available);
@@ -107,21 +119,98 @@ binance.exchangeInfo((error, info) => {
         balance = balances[currency.toUpperCase()].available * config.investment_percentage;
       }
       console.log(`Using ${balance} out of ${balances[currency.toUpperCase()].available} ${currency.toUpperCase()}`);
-      coinPrice = parseFloat(ticker.askPrice) + (parseFloat(ticker.askPrice) * config.market_buy_inflation);
-      shares = balance / coinPrice;
+
+      let askCount = 1;
+      let askShares = 0.0;
+      let askBalance = balance;
+      let coinPrice = 0.0;
+      _.each(depth.asks, (quantity, price) => {
+        // calculate price for order
+        if (askBalance > 0) {
+          if (askCount == 1) {
+            console.log(`Ask price of ${coin}: ${price}`);
+          }
+          if ((quantity * price) < balance) {
+            askShares += quantity;
+            askBalance -= (quantity * price);
+            askCount++;
+            console.log(`Buying ${quantity} at ${price}`);
+          } else {
+            askShares += askBalance / price;
+            coinPrice = price;
+            console.log(`Buying ${askBalance / price} at ${price}`);
+            askBalance = 0;
+            console.log(`Order would fill ${askCount} orders`);
+            console.log(`Total shares: ${askShares}`);
+            console.log(`Max price: ${coinPrice}`);
+            console.log(`Average price: ${balance / askShares}`);
+          }
+        }
+      });
+
+      console.log('\n\nSetting inflation...');
+      let avgPrice = balance / askShares;
+      coinPrice = coinPrice + (coinPrice * config.market_buy_inflation);
+      shares = askShares - (askShares * config.market_buy_inflation);
+      // this may not work - not sure if binance allows orders to fill the book like that, may need more testing
+      console.log(`Will submit market buy for ${shares} at average price ${avgPrice} for a total of ${shares * avgPrice}`)
+      // coinPrice = parseFloat(ticker.askPrice) + (parseFloat(ticker.askPrice) * config.market_buy_inflation);
+      // shares = balance / coinPrice;
       if (fake_buy)
         shares += 100;
       shares = binance.roundStep(shares, stepSize);
-      console.log(`Buying ${shares} of ${coin} at price ${coinPrice}`);
+
+      if (stop_loss) {
+        console.log(`\n\nChecking stop loss...`);
+        let bidCount = 1;
+        let purchasedVolume = shares;
+        let stopSum = 0.0;
+        _.each(depth.bids, (quantity, price) => {
+          // test stop loss
+          if (purchasedVolume > 0) {
+            if (bidCount == 1) {
+              console.log(`Bid price of ${coin}: ${price}`);
+            }
+            if (quantity < purchasedVolume) {
+              stopSum += (quantity * price);
+              purchasedVolume -= quantity;
+              console.log(`Selling ${quantity} at ${price}. Remaining: ${purchasedVolume}`);
+              bidCount++;
+            } else {
+              stopSum += (purchasedVolume * price);
+              console.log(`Selling ${purchasedVolume} at ${price}. Remaining: 0`);
+              purchasedVolume = 0;
+              // console.log(`stopSum: ${stopSum} shares: ${shares} avgPrice: ${avgPrice}`)
+              let avgGain = ((stopSum / (shares * avgPrice)) - 1) * 100;
+              // console.log(avgGain);
+              if (include_fees) {
+                avgGain = avgGain - 0.1;
+              } 
+              console.log(`Simulated immediate gain: ${avgGain.toFixed(2)}%`);
+              if(avgGain < (stop_loss * -100)) {
+                exit(`CANCELLING ORDER - STOP LOSS WOULD TRIGGER IMMEDIATELY AT ${sellPrice}`);
+              } else {
+                console.log(`Continuing...`)
+              }
+            }
+          }
+        });
+      }
+
+      console.log(`\n\nMarket buying ${shares} of ${coin}`);
       binance.marketBuy(coin, shares, flags, (error, response) => {
         if(error) exit(error.body);
         console.log("Market Buy response", response);
         console.log("order id: " + response.orderId);
-        var filledPrice;
+        var filledPrice = 0.0;
+        var fillTotal = 0.0;
         if (response.fills) {
-          filledPrice = response.fills[0].price;
+          _.each(response.fills, (fill) => {
+            fillTotal += fill.price * fill.qty;
+          });
+          filledPrice = fillTotal / shares;
         } else {
-          filledPrice = ticker.askPrice;
+          filledPrice = avgPrice;
         }
         console.log('Fill price: ' + filledPrice);
         if (response.orderId || fake_buy) {
@@ -146,15 +235,15 @@ binance.exchangeInfo((error, info) => {
 
 
 function sell(coin, shares, filledPrice) {
-  let average_price = 0;
-  let total_price = 0;
-  let total_volume = 0;
+  let average_price = 0.0;
+  let total_price = 0.0;
+  let total_volume = 0.0;
   let count = 1;
-  let sellPrice = 0;
+  let sellPrice = 0.0;
   let purchasedVolume = shares;
-  let gainSum = 0;
-  let stopPrice = 0;
-  console.log(`polling for ${desired_return * 100}% return`);
+  let gainSum = 0.0;
+  let stopPrice = 0.0;
+  // console.log(`polling for ${desired_return * 100}% return`);
   binance.depth(coin, (error, depth, symbol) => {
     _.each(depth.bids, (quantity, price) => {
       // console.log(quantity, price);
@@ -163,19 +252,19 @@ function sell(coin, shares, filledPrice) {
         console.log(`Current bid on ${coin}: ${price}`);
       }
       if (quantity < purchasedVolume) {
-        gainSum += (quantity * price) / (filledPrice * quantity) - 1;
+        gainSum += (quantity * price);
         purchasedVolume -= quantity;
         count++;
         // console.log(count);
       } else {
         // console.log('finish at count '+count);
-        gainSum += (purchasedVolume * price) / (filledPrice * purchasedVolume) - 1;
-        let avgGain = (gainSum/count) * 100;
+        gainSum += (purchasedVolume * price);
+        let avgGain = ((gainSum / (shares * filledPrice)) - 1) * 100;
+        // let avgGain = (gainSum/count) * 100;
         if (include_fees) {
-          // todo: fix
-          // avgGain = avgGain - 0.5;
+          avgGain = avgGain - 0.1;
         } 
-        console.log(`total gain on trade: ${avgGain.toFixed(2)}%`);
+        console.log(`total gain on trade (${count} fills reqd): ${avgGain.toFixed(2)}%`);
         // sell based on percentage
         if (stop_loss) {
           if(avgGain < (stop_loss * -100)) {
@@ -197,7 +286,7 @@ function sell(coin, shares, filledPrice) {
           });
           return false;
         } else {
-          console.log(`GAIN DOES NOT PASS CONFIGURED THRESHOLD, NOT SELLING`);
+          console.log(`GAIN DOES NOT PASS ${desired_return * 100}%, NOT SELLING`);
           return false;
         }
       }
@@ -219,8 +308,12 @@ function sellLow(coin, shares, filledPrice) {
     binance.marketSell(coin, shares, flags, (error, response) => {
       if(error) exit(`something went wrong with marketSell: ${error}`);
       let sellPrice;
+      let sellTotal = 0.0;
       if (response.fills) {
-        sellPrice = response.fills[0].price;
+        _.each(response.fills, (fill) => {
+          sellTotal += fill.price * fill.qty;
+        });
+        sellPrice = sellTotal / shares;
       } else {
         sellPrice = ticker.bidPrice;
       }

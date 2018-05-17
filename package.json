@@ -4,6 +4,7 @@
   "description": "auto-buy a coin with some config settings",
   "main": "pumpBot.js",
   "dependencies": {
+    "console-stamp": "^0.2.6",
     "lodash": "^4.17.4",
     "minimist": "^1.2.0",
     "node-binance-api": "^0.5.0"
