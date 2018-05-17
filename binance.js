@@ -102,10 +102,6 @@ binance.exchangeInfo((error, info) => {
   let priceFilter = coinInfo.filters.find(function (obj) { return obj.filterType == 'PRICE_FILTER'; });
   let lotFilter = coinInfo.filters.find(function (obj) { return obj.filterType == 'LOT_SIZE'; });
   var stepSize = lotFilter.stepSize;
-  // binance.bookTickers(coin, (error, ticker) => {
-  //   console.log(`Ask price of ${coin}: `, ticker.askPrice);
-  //   console.log(`Bid price of ${coin}: `, ticker.bidPrice);
-  // });
 
   binance.depth(coin, (error, depth, symbol) => {
     if(error) exit(error);
@@ -297,9 +293,6 @@ function sell(coin, shares, filledPrice) {
 /**
 * sellLow - sells immediately at market rate
 **/
-
-// Ask price of LINKETH:  0.00071879
-// Bid price of LINKETH:  0.00071595
 
 function sellLow(coin, shares, filledPrice) {
   clearInterval(sellPoll);
