@@ -126,7 +126,7 @@ binance.exchangeInfo((error, info) => {
           if (askCount == 1) {
             console.log(`Ask price of ${coin}: ${price}`);
           }
-          if ((quantity * price) < balance) {
+          if ((quantity * price) < askBalance) {
             askShares += quantity;
             askBalance -= (quantity * price);
             askCount++;
@@ -152,8 +152,8 @@ binance.exchangeInfo((error, info) => {
       console.log(`Will submit market buy for ${shares} at average price ${avgPrice} for a total of ${shares * avgPrice}`)
       // coinPrice = parseFloat(ticker.askPrice) + (parseFloat(ticker.askPrice) * config.market_buy_inflation);
       // shares = balance / coinPrice;
-      if (fake_buy)
-        shares += 100;
+      // if (fake_buy)
+      //   shares += 100;
       shares = binance.roundStep(shares, stepSize);
 
       if (stop_loss) {
@@ -311,6 +311,9 @@ function sellLow(coin, shares, filledPrice) {
         sellPrice = ticker.bidPrice;
       }
       let sellSum = ((shares * sellPrice) / (filledPrice * shares) - 1) * 100;
+      if (include_fees) {
+        sellSum = sellSum - 0.1;
+      }
       console.log(sellSum);
       console.log(`total gain on trade: ${sellSum.toFixed(2)}%`);
       exit(response);
